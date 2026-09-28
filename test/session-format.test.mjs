@@ -1,3 +1,4 @@
+import {projectCompactionRequest} from '../vendor/upstream/tavern-plugin/lib/domain/compaction-request.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {Session} from '@deepseek-ai/dsh-session'
@@ -19,5 +20,6 @@ test('Tavern edited assistant/tool messages survive native admission without alt
  const messages=projectTavernSurfaceMessages(raw.slice(-2).map(event=>event.data))
  assert.equal(messages[0].content[0].arguments,argumentText)
  assert.deepEqual(messages,[assistant.message,result.message])
+ assert.deepEqual(projectCompactionRequest({purpose:'compaction',messages:raw.slice(-2).map(event=>event.data)}).messages,messages)
  assert.equal(raw.at(-2).data.content.length,0)
 })

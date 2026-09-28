@@ -1,4 +1,4 @@
-import { ensureSessionSystemHead, sessionEvents, appendSessionEvent, sessionEventData } from './session-events.js'
+import { ensureSessionSystemHead, sessionEvents, appendSessionEvent, sessionEventData, finishInitialSessionTurn } from './session-events.js'
 import { createForegroundFrameBuilder } from './agent-input-frame.js'
 import { createForegroundFrameSessionAdapter } from './foreground-frame-session-adapter.js'
 import { foregroundFrameInputs } from './turn-orchestration.js'
@@ -87,6 +87,23 @@ export async function buildImportedConversation(chat, parsed, { operationId, fil
 /** Resume only our exact contiguous event prefix; never rewrite append-only history. */
 export async function appendImportedEvents(session, plan, flush) {
   ensureSessionSystemHead(session)
+  if(session.header?.version>=4){
+    const stages=plan.events.filter(event=>!(['turn/start','step/start'].includes(event.type)&&event.data.turn===1))
+    const events=sessionEvents(session).filter(event=>event.type!=='session/end-seed')
+    const messageId=event=>event?.type==='user/message'?event.data.id:event?.data?.message?.id
+    const firstId=messageId(stages[0])
+    const found=firstId?events.findIndex(event=>messageId(event)===firstId):-1
+    const start=found<0?events.length:found
+    if(events.length>start+stages.length)throw new Error('导入期间 Session 已有新事件，请使用新 Session')
+    for(const [index,expected] of stages.entries()){
+      const existing=events[start+index]
+      if(existing){if(existing.type!==expected.type||JSON.stringify(existing.data)!==JSON.stringify(sessionEventData(session,expected.type,expected.data)))throw new Error('导入事件与当前 Session 不一致，拒绝重复追加')}
+      else appendSessionEvent(session,expected.type,expected.data,expected.intent)
+    }
+    finishInitialSessionTurn(session)
+    await flush(session)
+    return
+  }
   const events = sessionEvents(session).filter(event => event.type !== 'session/end-seed')
   let start = events.findIndex(event => event.type === 'turn/start' || event.type === 'assistant/message' ||
     (event.type === 'user/message' && event.data?.id !== 'tavern-session-prefix:' + session.id))

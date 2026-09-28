@@ -1,3 +1,4 @@
+import {startInitialSessionTurn} from './session-events.js'
 import { rescueHistoryInput, rescueHistoryNotice } from './chat-history-rescue.js'
 import { prepareWorldBookRecall } from './worldbook-recall.js'
 import { createHash } from 'node:crypto'
@@ -149,6 +150,7 @@ export function createChatHistoryImportService({ initialization, cards, worldBoo
       await store.writeJson(path, journal)
     }
     const target = await native.wait(input.sessionId)
+    if(target.session.header?.version>=4&&target.session.surface.nodes.length===0)startInitialSessionTurn(target.session)
     await native.ensurePrefix(target.session, journal.plan.chat.cardContextSnapshot)
     await appendImportedEvents(target.session, journal.plan, native.flush)
     if (target.agent?.phase?.kind === 'idle') target.agent.phase.lastTurn = Math.max(target.agent.phase.lastTurn || 0, journal.plan.lastTurn)

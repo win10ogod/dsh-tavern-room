@@ -1,3 +1,4 @@
+import {projectTavernSurfaceMessages} from './session-events.js'
 import { isPluginSource, sourceOwner } from './message-source.js'
 import { boundedCompaction } from './bounded-compaction.js'
 
@@ -6,11 +7,12 @@ import { boundedCompaction } from './bounded-compaction.js'
 // the normal request projection, so omit them at this request boundary too.
 export function projectCompactionRequest(request) {
   if (request?.purpose !== 'compaction' || !Array.isArray(request.messages)) return request
-  const messages = request.messages.filter(message => !(message?.role === 'user' &&
+  const restored = projectTavernSurfaceMessages(request.messages)
+  const messages = restored.filter(message => !(message?.role === 'user' &&
     Array.isArray(message.content) && message.content.length === 0 &&
     isPluginSource(message.source) &&
     ['dsh-tavern', 'dsh-tavern-failed-turn-cleanup'].includes(sourceOwner(message.source))))
-  return messages.length === request.messages.length ? request : { ...request, messages }
+  return messages.length === request.messages.length && messages.every((message,index)=>message===request.messages[index]) ? request : { ...request, messages }
 }
 
 export function installCompactionRequestProjection(ctx, ownsSession) {
