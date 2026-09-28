@@ -19,6 +19,8 @@ async function retainSession(id){
 }
 const sessionAdapter=new Proxy(nativeHost.sessions,{get(target,key){
  if(key==='open')return id=>{void retainSession(id).then(()=>window.dispatchEvent(new CustomEvent('tavern-room-selected',{detail:{sessionId:id}}))).catch(error=>window.dispatchEvent(new CustomEvent('tavern-room-error',{detail:error.message})))}
+ if(key==='refreshSubagents')return id=>target.using(id,{source:'tavern-catalog'},async()=>{await target.refresh()})
+ if(key==='openSubagent')return address=>nativeHost.get('uiWorkspace').openSession(address)
  if(key==='clear')return()=>window.dispatchEvent(new CustomEvent('tavern-room-selected',{detail:{sessionId:''}}))
  if(key==='create')return async options=>{const result=await api('allocate',options);await retainSession(result.sessionId);return result.sessionId}
  if(key==='fork')return async options=>{const id=await target.fork(options);await retainSession(id);return id}

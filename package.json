@@ -1,6 +1,6 @@
 {
   "name": "dsh-tavern-room",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "main": "lib/index.js",
   "description": "DSH Tavern engine, character workbench, JavaScript/iframe and MVU runtime in one dedicated DSH plugin",
@@ -45,7 +45,8 @@
         "@deepseek-ai/dsh-api-workspace-controller",
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-session",
-        "@deepseek-ai/dsh-client-ui-workspace"
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-api-remotes"
       ]
     }
   },
