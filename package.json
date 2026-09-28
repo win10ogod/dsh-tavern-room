@@ -1,0 +1,87 @@
+{
+  "name": "dsh-tavern-room",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "description": "DSH Tavern engine, character workbench, JavaScript/iframe and MVU runtime in one dedicated DSH plugin",
+  "license": "AGPL-3.0-only",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cards": "./lib/features/cards.js",
+    "./worldbooks": "./lib/features/worldbooks.js",
+    "./story": "./lib/features/story.js",
+    "./memory": "./lib/features/memory.js",
+    "./mvu": "./lib/features/mvu.js",
+    "./phone": "./lib/features/phone.js",
+    "./appearance": "./lib/features/appearance.js",
+    "./presets": "./lib/features/presets.js",
+    "./client": "./lib/client.js",
+    "./engine": "./lib/full-engine.js",
+    "./user-tools": "./vendor/upstream/presets/tavern/user-tools-bridge/index.js"
+  },
+  "files": [
+    "lib",
+    "public",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "scripts/import-sillytavern.mjs",
+    "scripts/verify-import.mjs",
+    "vendor",
+    "scripts/verify-engine-import.mjs"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-api-workspace-controller",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-session": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-tools": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-agent": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-skill-filesystem": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-agent-preset-registry": "0.1.7-rc.2"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.4",
+    "jsdom": "26.1.0",
+    "chevrotain": "^11.2.0",
+    "marked": "16.3.0",
+    "yaml": "2.9.0",
+    "acorn": "8.15.0",
+    "dsh-mnemon": "0.5.15",
+    "dsh-mnemon-source-runtime": "0.5.9",
+    "dsh-mnemon-source-documents": "0.5.6",
+    "lucide-react": "^1.38.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check lib/index.js && node --check lib/full-engine.js && node --check public/full-app.js && npm test",
+    "build": "node vendor/upstream/bin/build-tavern-client.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/win10ogod/dsh-tavern-room.git"
+  }
+}
