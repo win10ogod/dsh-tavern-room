@@ -31,7 +31,15 @@ export function createServerTemplateSync({ run, onError, delayMs = 250, maxRetry
             record.retryDelay = Math.min(Math.max(delayMs, maxRetryDelayMs), record.retryDelay * 2)
           } else record.retryDelay = delayMs
         }
-      } catch (error) { onError?.(error) }
+      } catch (error) {
+        if (error.code === 'PROMPT_TEMPLATE_STATE_CONFLICT') {
+          record.dirty = true
+          record.retryDelay = record.version === version
+            ? Math.min(Math.max(delayMs, maxRetryDelayMs), record.retryDelay * 2)
+            : delayMs
+        }
+        onError?.(error)
+      }
       finally {
         record.running = false
         if (record.dirty) arm(id, record)

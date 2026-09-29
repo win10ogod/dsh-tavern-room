@@ -44,7 +44,7 @@ process.on('message', async message => {
     const item = pending.get(message.id)
     if (!item) return
     pending.delete(message.id)
-    message.error ? item.reject(new Error(message.error)) : item.resolve(message.result)
+    message.error ? item.reject(Object.assign(new Error(message.error), { code: message.errorCode })) : item.resolve(message.result)
     return
   }
   try {
@@ -54,6 +54,6 @@ process.on('message', async message => {
     else if (message.type === 'synchronize') result = await session.synchronize()
     else throw new Error('Unknown server template operation')
     send({ type: 'result', id: message.id, result })
-  } catch (error) { send({ type: 'result', id: message.id, error: String(error.message || error) }) }
+  } catch (error) { send({ type: 'result', id: message.id, error: String(error.message || error), errorCode: error.code }) }
 })
 process.on('disconnect', () => process.exit(0))

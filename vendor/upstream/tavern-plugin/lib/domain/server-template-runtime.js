@@ -87,7 +87,7 @@ export function createServerTemplateRuntime({ rpc, store, timeoutMs = 120000, id
         const item = record.pending.get(message.id)
         if (!item) return
         record.pending.delete(message.id); clearTimeout(item.timer)
-        message.error ? item.reject(new Error(message.error)) : item.resolve(message.result)
+        message.error ? item.reject(Object.assign(new Error(message.error), { code: message.errorCode })) : item.resolve(message.result)
       } else if (message.type === 'rpc') {
         // Bind ownership here, not to the arguments supplied by template code.
         const operation = record.writes.then(async () => {
@@ -99,7 +99,7 @@ export function createServerTemplateRuntime({ rpc, store, timeoutMs = 120000, id
           const result = await operation
           if (!record.closed) child.send({ type: 'rpc-result', id: message.id, result }, () => {})
         } catch (error) {
-          if (!record.closed) child.send({ type: 'rpc-result', id: message.id, error: String(error.message || error) }, () => {})
+          if (!record.closed) child.send({ type: 'rpc-result', id: message.id, error: String(error.message || error), errorCode: error.code }, () => {})
         }
       }
     })
