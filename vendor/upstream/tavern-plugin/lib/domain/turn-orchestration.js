@@ -6,7 +6,6 @@ import { scriptPromptFrameInputs, consumeScriptPrompts } from './tavern-script-p
 import { rememberTavernResources } from './workspace-resources.js'
 import { projectBackgroundInput } from './runtime-content-projection.js'
 import { lastTavernHelperVariables } from './tavern-helper-context.js'
-import { bindSceneWorldbook } from './scene-worldbook.js'
 
 export const cordisToolNames = Object.freeze([
   'cordis_inspect_list',
@@ -375,7 +374,6 @@ export function createTurnOrchestrator(options) {
       chat.lastWorldBookRecall = clone(chat.preparedWorldBook)
       chat.worldBookError = foregroundWorldBook.error
     }
-    const sceneWorldbook = typeof options.captureSceneWorldbook === 'function' ? await options.captureSceneWorldbook(chat, card) : null
     const plan = await planner.plan({ purpose: 'body', card, chat: templateWorldBook?.macroState ? { ...chat, macroState: templateWorldBook.macroState } : chat, userText: runtimeUserText, sessionId: input.sessionId, nativeTurn: turn, scriptReference, worldBookContext })
     const source = frameSource(chat, card, foregroundOperation)
     source.worldBook.scriptPromptRefs = Array.isArray(scriptWorldBook && scriptWorldBook.refs) ? clone(scriptWorldBook.refs) : []
@@ -391,7 +389,7 @@ export function createTurnOrchestrator(options) {
       inputs: foregroundFrameInputs(plan, userText, runtimeUserText,
         Object.hasOwn(input, 'runtimePresetSnapshot') ? input.runtimePresetSnapshot
           : resolveRuntimePresetMacros(chat.runtimePresetSnapshot, { charName: card.name, macroState: chat.macroState }).snapshot, chat),
-      source: { ...source, ...(sceneWorldbook ? { sceneWorldbook } : {}) }
+      source
     }
     let frame = frameBuilder.build(frameInput)
     if (foregroundWorldBook?.log && typeof options.recordWorldbookRecall === 'function') {
@@ -427,9 +425,7 @@ export function createTurnOrchestrator(options) {
     const begun = timeline.apply({ chat, intent: { kind: 'body.begin', turn, userText } })
     chat = begun.chat
     const operation = chat.timeline.operations[begun.value.operationId]
-    if (operation && !Object.hasOwn(operation, 'sceneWorldbook') && typeof options.captureSceneWorldbook === 'function') {
-      operation.sceneWorldbook = await options.captureSceneWorldbook(chat, await store.readCard(cardPathOf(chat), chat))
-    }
+
     chat.foregroundError = null
     let projectedText = runtimeInputFor(chat, turn, userText)
     if (projectedText === null) {
@@ -672,7 +668,6 @@ export function createTurnOrchestrator(options) {
           variables: [clone(previousMvuVariables || {})],
           mvu: { pending: true, modified: false, diagnostics: [], events: [] }
         })
-        bindSceneWorldbook(assistantMessage, rememberedFrame(chat, operation.id)?.source?.sceneWorldbook || operation.sceneWorldbook)
         draft.messages.push(assistantMessage)
         draft.settleStatus = 'pending'
         draft.settleError = null

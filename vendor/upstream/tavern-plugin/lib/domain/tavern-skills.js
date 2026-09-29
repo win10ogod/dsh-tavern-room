@@ -9,9 +9,9 @@ export function canonicalTavernSkillName(name) {
   return typeof name === 'string' && name.startsWith('tavern-') && RENAMED_BUILTIN_SKILLS.has(name.slice(7)) ? name.slice(7) : name
 }
 
-export const SKILL_AGENTS = ['card', 'foreground', 'background', 'image']
+export const SKILL_AGENTS = ['card', 'foreground', 'background']
 export function normalizeSkillAgents(value) {
-  if (!Array.isArray(value) || value.some(role => !SKILL_AGENTS.includes(role))) throw new Error('Skill 用途必须是卡片、前台、后台或文生图 Agent')
+  if (!Array.isArray(value) || value.some(role => !SKILL_AGENTS.includes(role))) throw new Error('Skill 用途必须是卡片、前台、后台 Agent')
   return [...new Set(value)]
 }
 
@@ -119,7 +119,7 @@ export function createTavernSkillModule(options = {}) {
         const configuration = await assignments()
         const assigned = Object.hasOwn(configuration, normalized) ? configuration[normalized] : undefined
         if (assigned === null) return null
-        const agents = assigned === undefined ? [purpose === 'writing' ? 'foreground' : purpose === 'background' ? 'background' : purpose === 'image' ? 'image' : root.role] : normalizeSkillAgents(assigned)
+        const agents = assigned === undefined ? [purpose === 'writing' ? 'foreground' : purpose === 'background' ? 'background' : root.role] : normalizeSkillAgents(assigned)
         return { name: normalized, source: source.kind, content, path: source.path, description: meta.description || '', purpose, agents, modelInvocable: meta['disable-model-invocation'] !== true, userInvocable: meta['user-invocable'] !== false }
       } catch (error) {
         if (!error || error.code !== 'ENOENT') throw error
@@ -143,7 +143,7 @@ export function createTavernSkillModule(options = {}) {
       modelInvocable: input.modelInvocable ?? previous?.modelInvocable,
       userInvocable: input.userInvocable ?? previous?.userInvocable
     })
-    if (input.purpose !== undefined && !['card', 'writing', 'background', 'image'].includes(input.purpose)) throw new Error('未知 Skill 用途')
+    if (input.purpose !== undefined && !['card', 'writing', 'background'].includes(input.purpose)) throw new Error('未知 Skill 用途')
     const agents = input.agents === undefined ? undefined : normalizeSkillAgents(input.agents)
     const references = input.references ?? (present ? await referenceFiles(name) : [])
     if (!Array.isArray(references) || references.length > 30) throw new Error('Skill 最多附带 30 个参考文件')

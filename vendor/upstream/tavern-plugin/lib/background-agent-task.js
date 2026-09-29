@@ -7,13 +7,10 @@ import { prependSystemInstruction } from './domain/system-append.js'
 import { rewindBackgroundSurface } from './domain/background-surface.js'
 import { sessionEvents } from './domain/session-events.js'
 import { randomUUID } from 'node:crypto'
-import { readSceneImageSystemInstruction } from './scene-image-prompts.js'
-import { CHARACTER_DESIGN_READ_TOOL } from './domain/character-design-document.js'
 import {
   CHARACTER_DESIGN_FINISH_TOOL,
   createCharacterDesignStage
 } from './domain/character-design-stage.js'
-import { imageToolCall } from './domain/scene-plan-draft.js'
 import { runtimePresetPhaseMessages } from './domain/runtime-preset-lifecycle.js'
 import { ensureSessionStablePrefix, readSessionStablePrefix, sessionStablePrefixSections, withCurrentWorldbook } from './domain/session-stable-prefix.js'
 
@@ -41,7 +38,7 @@ function backgroundPrompt(messages, turnContext, task, taskProtocol, input = {})
       : (message && message.role === 'assistant' ? '正文' : '用户')
     return '[' + role + ']\n' + messageText(message)
   }).filter(function (text) { return text.trim() !== '' }).join('\n\n')
-  const taskName = task === 'worldbook-filter' ? '世界书筛选' : task === 'image' ? '场景生图' : task === 'settlement' ? '状态结算' : task === 'phone' ? '手机私聊' : task === 'character-design' ? '人物设计' : '候选生成'
+  const taskName = task === 'worldbook-filter' ? '世界书筛选' : task === 'settlement' ? '状态结算' : task === 'phone' ? '手机私聊' : task === 'character-design' ? '人物设计' : '候选生成'
   sections.push('【最近剧情与本次任务】\n任务类型：' + taskName + '\n' + recent)
   const protocol = str(taskProtocol).trim()
   if (protocol !== '') sections.push('【DSH 后台任务协议（最终指令）】\n' + protocol)
@@ -162,22 +159,13 @@ export function createBackgroundAgentTask(options) {
         text: () => {
           const fixed = sessionStablePrefixSections(state.session)
           const sections = state.currentWorldbook === undefined ? fixed : withCurrentWorldbook(fixed, state.currentWorldbook)
-          const assembly = { sections: [...sections, { name: 'deployment:persona', text: state.input.task === 'image' ? (options.imageSystemPrompt ? options.imageSystemPrompt() : readSceneImageSystemInstruction()) : backgroundPersona }] }
+          const assembly = { sections: [...sections, { name: 'deployment:persona', text: backgroundPersona }] }
           return prependSystemInstruction(assembly, options.systemAppend?.()).sections.map(section => section.text).join('\n\n')
         }
       })
       childCtx.systemPrompt.suppressRuntimeContext()
-      if (state.input.task === 'image') {
-        childCtx.tools.register({
-          ...CHARACTER_DESIGN_READ_TOOL,
-          output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: value }] },
-          async execute(args) {
-            if (!state.imageReadTask) return JSON.stringify({ ok: false, error: '当前没有正在执行的绘图任务。' })
-            return state.imageReadTask(args)
-          }
-        })
-      }
-      childCtx.tools.restrict({ allow: state.input.task === 'phone' ? [] : state.input.task === 'image' ? ['skill', 'tavern_read_skill_reference'] : ['skill', 'tavern_read_skill_reference', 'web_search'] })
+
+      childCtx.tools.restrict({ allow: state.input.task === 'phone' ? [] : ['skill', 'tavern_read_skill_reference', 'web_search'] })
       childCtx.on('system-prompt/assemble', async function (_assembly, _context, next) {
         const assembly = await next()
         prependSystemInstruction(assembly, options.systemAppend?.())
@@ -188,13 +176,13 @@ export function createBackgroundAgentTask(options) {
           assembly.tools = []
           return assembly
         }
-        if (state.input.task !== 'image' && state.input.webSearchEnabled === true) return assembly
+        if (state.input.webSearchEnabled === true) return assembly
         assembly.sections = (assembly.sections || []).filter(function (section) { return section && section.name !== 'tool:web_search' })
         assembly.tools = (assembly.tools || []).filter(function (tool) { return tool && tool.name !== 'web_search' })
         return assembly
       })
       state.refreshConfiguredTools = function () {
-        if (state.input.task === 'image') return
+
         const key = JSON.stringify([state.input.task, state.input.backgroundTasksSnapshot || null])
         if (state.configuredToolsKey === key) return
         for (const dispose of state.stableToolDisposers || []) dispose()
@@ -250,8 +238,8 @@ export function createBackgroundAgentTask(options) {
 
   function installTaskTools(state, input, session) {
     const eventStart = sessionEvents(session).length
-    let tools = (Array.isArray(input.tools) ? input.tools : []).filter(tool => input.task !== 'image' || tool.name !== CHARACTER_DESIGN_READ_TOOL.name)
-    const hasCharacterDesignTools = input.task !== 'image' && tools.some(function (tool) {
+    let tools = (Array.isArray(input.tools) ? input.tools : [])
+    const hasCharacterDesignTools = tools.some(function (tool) {
       return tool && (tool.name === 'character_design_read' || tool.name === 'character_design_save')
     })
     if (hasCharacterDesignTools && !tools.some(function (tool) { return tool && tool.name === CHARACTER_DESIGN_FINISH_TOOL.name })) {
@@ -261,15 +249,12 @@ export function createBackgroundAgentTask(options) {
       ? createCharacterDesignStage({ temperature: input.characterDesignTemperature })
       : null
     state.characterDesignStage = characterDesignStage
-    if (input.task === 'image') state.imageReadTask = async args => {
-      if (input.stopToolsWhen?.()) return JSON.stringify({ ok: false, error: '画面方案已提交，请结束本轮。' })
-      return str(await input.onToolCall({ name: CHARACTER_DESIGN_READ_TOOL.name, arguments: args }))
-    }
+
     const maxToolCalls = Number.isInteger(input.maxToolCalls) && input.maxToolCalls > 0 ? input.maxToolCalls : 8
     let toolCallCount = 0
     let removed = false
     const allowed = new Map(tools.map(function (tool) { return [tool.name, tool] }))
-    if (stableBackgroundTools.length > 0 && input.task !== 'image') {
+    if (stableBackgroundTools.length > 0) {
       state.activeToolTask = {
         async execute(tool, args, execution) {
           const registeredShared = sharedByName.get(tool.name)
@@ -312,7 +297,7 @@ export function createBackgroundAgentTask(options) {
     async function removeTools() {
       if (removed) return
       removed = true
-      if (input.task === 'image') state.imageReadTask = null
+
       for (let index = disposers.length - 1; index >= 0; index--) await disposers[index]()
     }
     const disposers = tools.map(function (tool) {
@@ -331,7 +316,7 @@ export function createBackgroundAgentTask(options) {
                 return JSON.stringify({ message: input.toolLimitMessage || '已达到剧本查询上限，请停止查询，基于已有材料开始推理并输出最终候选。' })
               }
             }
-            const call = input.task === 'image' ? imageToolCall(tool.name, args, execution, sessionEvents(session), eventStart) : { name: tool.name, arguments: args }
+            const call = { name: tool.name, arguments: args }
             const invoke = async function () { input.signal?.throwIfAborted(); return str(await input.onToolCall(call)) }
             const result = characterDesignStage
               ? str(await characterDesignStage.execute(tool.name, invoke))
@@ -412,9 +397,7 @@ export function createBackgroundAgentTask(options) {
         }
       }
       const text = rawResult === null ? '' : rawResult.text.trim()
-      if (persistent && input.task === 'image' && typeof options.flushSession === 'function') {
-        await options.flushSession(agent.session)
-      }
+
       return { text, traceSessionId, persistent, traceBoundary: completedBoundary(sessionEvents(agent.session)) }
     } catch (error) {
       throw traceError(error, traceSessionId, input.task)

@@ -10,7 +10,7 @@ function str(value) { return value === undefined || value === null ? '' : String
 function usesFixedContext(chat) { return chat && (!chat.mode || chat.mode === 'story' || chat.mode === 'script' || (chat.mode === 'card' && chat.cardEditContext?.version === 1)) }
 
 /** Owns snapshot preparation, migration, persistence and concurrent build sharing. */
-export function createPlayCardSnapshots({ worldBooks, planner, readCard, writeChat, captureSceneWorldbook, userPreferenceProfile, logger = console }) {
+export function createPlayCardSnapshots({ worldBooks, planner, readCard, writeChat, userPreferenceProfile, logger = console }) {
   const pending = new Map()
 
   async function constantContext(chat, card) {
@@ -42,10 +42,7 @@ export function createPlayCardSnapshots({ worldBooks, planner, readCard, writeCh
       userProfileRevision: preference === null ? 0 : preference.revision,
       userProfileContextSnapshot: preference === null ? '' : preference.text
     }
-    // Only new, unpublished openings: migration cannot manufacture their past.
-    if (!(chat.messages || []).length && typeof captureSceneWorldbook === 'function') {
-      patch.sceneOpeningWorldbook = await captureSceneWorldbook(chat, card, worldBook)
-    }
+
     return patch
   }
 

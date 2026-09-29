@@ -11,7 +11,7 @@ export function observeHttpRequests(server, report, { now = Date.now, interval =
     if (path === '/plugins/events') return 'plugin-events'
     if (path === '/api/session/list') return 'session-list'
     if (path === '/api/subagents/list') return 'subagent-list'
-    if (/^\/api\/dsh-tavern\/(claimTavernScriptWork|heartbeatTavernScriptRuntime|completeTavernHelperEvent|getSession|syncSession|captureDisplayRuntime|sceneImageStatus|getSceneImageSettings|getUpdateStatus)$/.test(path)) return path.split('/').pop()
+    if (/^\/api\/dsh-tavern\/(claimTavernScriptWork|heartbeatTavernScriptRuntime|completeTavernHelperEvent|getSession|syncSession|captureDisplayRuntime|getUpdateStatus)$/.test(path)) return path.split('/').pop()
     if (/^\/api\/dsh-tavern\/(static-assets|remote-assets)(\/|$)/.test(path)) return 'card-assets'
     if (path.startsWith('/api/dsh-tavern/')) return 'tavern-api'
     if (path.startsWith('/api/')) return 'host-api'

@@ -120,7 +120,7 @@ export function createBackgroundAgentSessions(options, task) {
   }
 
   function residentKey(input) {
-    return JSON.stringify([str(input.sessionId), input.task === 'image' ? 'image' : 'background'])
+    return JSON.stringify([str(input.sessionId), 'background'])
   }
 
   async function releaseSuperseded(key) {
@@ -131,11 +131,7 @@ export function createBackgroundAgentSessions(options, task) {
   }
 
   function descriptorFor(input, persistent) {
-    if (input.task === 'image') return snapshotSubagentDescriptor({
-      mode: persistent ? 'continuable' : 'one-shot', provider: 'dsh-tavern-image', label: '场景生图',
-      ...(persistent ? { agentProvider: input.selection.provider, agentModel: input.selection.model,
-        persona: '维护本游戏的场景绘图方案，不续写故事、不修改变量。当前目标材料与保存的方案优先于旧任务。' } : {})
-    })
+
     if (input.task === 'phone') return snapshotSubagentDescriptor({
       mode: 'one-shot', provider: 'dsh-tavern-phone', label: '手机私聊',
       persona: '只扮演指定联系人回复一条手机私聊，不推进正文或修改游戏状态。'
@@ -154,23 +150,23 @@ export function createBackgroundAgentSessions(options, task) {
   async function execute(input) {
     // Resolve after the queue admits this task, then keep that selection fixed
     // through every step of the task, even if the game setting changes meanwhile.
-    if (options.resolveModelSelection && input.task !== 'image' && input.task !== 'phone') {
+    if (options.resolveModelSelection && input.task !== 'phone') {
       input = { ...input, selection: await options.resolveModelSelection(input) }
     }
     const parent = agents.get(input.sessionId)
     if (parent === undefined || parent.session === undefined) throw new Error('无法创建后台 Agent：前台会话不可用')
     const runtimeInput = Object.assign({}, input)
-    if (options.resolveBackgroundTasks && input.task !== 'image') {
+    if (options.resolveBackgroundTasks) {
       runtimeInput.backgroundTasksSnapshot = await options.resolveBackgroundTasks(input)
     }
-    if (options.resolveWebSearch && input.task !== 'image' && input.task !== 'phone') {
+    if (options.resolveWebSearch && input.task !== 'phone') {
       runtimeInput.webSearchEnabled = await options.resolveWebSearch(input)
     }
     const persistent = input.persistent === true
     const requestedSessionId = str(persistent && typeof input.resolvePersistentSessionId === 'function'
       ? await input.resolvePersistentSessionId() : input.persistentSessionId)
     const key = residentKey(input)
-    const needsSession = persistent && input.task !== 'image' && typeof options.needsNewBackgroundSession === 'function'
+    const needsSession = persistent && typeof options.needsNewBackgroundSession === 'function'
       && await options.needsNewBackgroundSession(input.sessionId)
     const residentSessionId = needsSession && requestedSessionId === '' ? '' : str(residentSessionByParent.get(key))
     let traceSessionId = requestedSessionId || (persistent ? residentSessionId : '') || makeId()
@@ -206,7 +202,7 @@ export function createBackgroundAgentSessions(options, task) {
               setup: task.setup(state, descriptor, false)
             })
           } catch (error) {
-            if (input.task === 'image' || !missingSession(error)) throw error
+            if (!missingSession(error)) throw error
             handle = undefined
             traceSessionId = makeId()
           }
@@ -214,12 +210,11 @@ export function createBackgroundAgentSessions(options, task) {
             const session = handle.agent.session
             const savedDescriptor = sessionEvents(session).find(event => event.type === 'subagent/descriptor')?.data
             const savedParent = session.header?.parentSession
-            if (savedParent && savedParent !== parent.id || savedDescriptor &&
-              (savedDescriptor.provider === 'dsh-tavern-image') !== (input.task === 'image')) {
+            if (savedParent && savedParent !== parent.id) {
               await handle.dispose()
               throw new Error('持久后台 Agent 的父会话或任务类型不匹配，未创建替代会话')
             }
-            if (input.task !== 'image' && savedDescriptor && STALE_BACKGROUND_PROVIDERS.has(savedDescriptor.provider)) {
+            if (savedDescriptor && STALE_BACKGROUND_PROVIDERS.has(savedDescriptor.provider)) {
               await handle.dispose()
               handle = undefined
               traceSessionId = makeId()
@@ -278,7 +273,7 @@ export function createBackgroundAgentSessions(options, task) {
       if (state.abandoned) {
         // Never reuse a provider consumer that may ignore cancellation.
         abandonedSessions.add(traceSessionId)
-        try { if (persistent && input.task !== 'image') await options.retirement?.retire(traceSessionId, str(input.sessionId)) }
+        try { if (persistent) await options.retirement?.retire(traceSessionId, str(input.sessionId)) }
         catch (error) { console.warn('dsh-tavern: 后台会话退休状态保存失败', traceSessionId, error) }
         residentHandles.delete(traceSessionId)
         if (residentSessionByParent.get(key)===traceSessionId) residentSessionByParent.delete(key)
@@ -382,7 +377,7 @@ export function createBackgroundAgentSessions(options, task) {
     let count = 0
     for (const sessionId of activeSessions) {
       const context = requestContexts.get(sessionId)
-      if (context?.parentSessionId !== parentSessionId || ['image', 'phone'].includes(context.task)) continue
+      if (context?.parentSessionId !== parentSessionId || ['phone'].includes(context.task)) continue
       const agent = residentHandles.get(sessionId)?.handle?.agent || agents.get(sessionId)
       const progress=residentHandles.get(sessionId)?.state.progress
       if (progress) { progress.cancel(); count++ }
@@ -392,7 +387,7 @@ export function createBackgroundAgentSessions(options, task) {
   }
 
   function progress(parentSessionId) {
-    for(const id of activeSessions) if(requestContexts.get(id)?.parentSessionId===parentSessionId && !['image','phone'].includes(requestContexts.get(id)?.task)) {
+    for(const id of activeSessions) if(requestContexts.get(id)?.parentSessionId===parentSessionId && !['phone'].includes(requestContexts.get(id)?.task)) {
       const snapshot=residentHandles.get(id)?.state.progress?.snapshot()
       if(snapshot) return {...snapshot,task:requestContexts.get(id).task}
     }

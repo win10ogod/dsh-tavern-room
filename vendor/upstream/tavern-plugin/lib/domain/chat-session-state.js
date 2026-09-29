@@ -208,7 +208,7 @@ export function projectDisplayRuntimeState(chat, requestedTurn) {
 export function projectChatBackgroundConfig(chat) {
   const selected = {}
   for (const key of ['id', 'sessionId', 'mode', 'backgroundConfigVersion', 'conversationFeaturesVersion',
-    'backgroundModelSelection', 'backgroundModelRevision', 'backgroundTasks', 'webSearchEnabled', 'sceneImagesEnabled', 'cardContextRevision']) {
+    'backgroundModelSelection', 'backgroundModelRevision', 'backgroundTasks', 'webSearchEnabled', 'cardContextRevision']) {
     if (Object.hasOwn(chat, key)) selected[key] = chat[key]
   }
   selected.backgroundSessionStatus = chat.timeline?.participants?.background?.status
@@ -229,21 +229,4 @@ export function projectSettlementCheckpoint(chat, messageId, operationId) {
       operations: operation ? { [operationId]: operation } : {} },
     messages: [chat.messages[messageId]]
   }) }
-}
-
-// Scene identity needs story text, but never MVU snapshots, card data or display artifacts.
-export function projectSceneImageState(chat) {
-  return copyJsonTree({
-    id: chat.id, sessionId: chat.sessionId, mode: chat.mode,
-    backgroundConfigVersion: chat.backgroundConfigVersion,
-    conversationFeaturesVersion: chat.conversationFeaturesVersion,
-    sceneImagesEnabled: chat.sceneImagesEnabled,
-    messages: (chat.messages || []).map(message => ({
-      role: message.role, turn: message.turn, greeting: message.greeting,
-      text: message.text, sourceText: message.sourceText, swipeId: message.swipeId,
-      // Keep indices stable: only the active swipe participates in scene identity.
-      swipes: Array.isArray(message.swipes) ? message.swipes.map((text, index) =>
-        index === Math.max(0, Number(message.swipeId) || 0) ? text : null) : undefined
-    }))
-  })
 }

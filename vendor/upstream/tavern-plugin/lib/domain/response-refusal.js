@@ -31,7 +31,7 @@ export function classifyResponse({ text = '', error = '', finish = null, complet
 export function requestChecks(requests, mode, patterns) {
   return requests.map(request => ({
     requestId: request.id,
-    agent: mode === 'card' ? 'card' : request.scope === 'foreground' ? 'foreground' : /image|scene|illustration/.test(request.task) ? 'image' : 'background',
+    agent: mode === 'card' ? 'card' : request.scope === 'foreground' ? 'foreground' : 'background',
     task: request.task,
     ...classifyResponse({ text: request.response?.text || '', error: request.response?.error || '', finish: request.response?.finish, completed: request.status === 'completed' }, patterns),
   }))

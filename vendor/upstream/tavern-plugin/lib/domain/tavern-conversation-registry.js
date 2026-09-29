@@ -1,4 +1,4 @@
-import { projectSceneImageState, projectChatBackgroundConfig } from './chat-session-state.js'
+import { projectChatBackgroundConfig } from './chat-session-state.js'
 import { currentBackgroundSessionId, referencedBackgroundSessionIds } from './background-identity.js'
 function str(value) {
   return typeof value === 'string' ? value : (value === undefined || value === null ? '' : String(value))
@@ -53,13 +53,7 @@ export function createTavernConversationRegistry(options = {}) {
     return resolveUsing(sessionId, id => typeof store.readChatState === 'function' ? store.readChatState(id) : store.readChat(id))
   }
 
-  async function resolveSceneImageState(sessionId) {
-    return resolveUsing(sessionId, async id => {
-      if (store.readSceneImageState) return store.readSceneImageState(id)
-      const chat = await store.readChat(id)
-      return chat ? projectSceneImageState(chat) : undefined
-    })
-  }
+
 
   async function resolveBackgroundConfig(sessionId) {
     return resolveUsing(sessionId, async id => {
@@ -217,5 +211,5 @@ export function createTavernConversationRegistry(options = {}) {
     return { deleted: true }
   }
 
-  return { links, resolve, resolveState, resolveSceneImageState, resolveBackgroundConfig, publish, sync, list, touch, remove }
+  return { links, resolve, resolveState, resolveBackgroundConfig, publish, sync, list, touch, remove }
 }

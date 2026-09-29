@@ -80,17 +80,6 @@ body.dsh-tavern-shell-active .dsh-tavern-landing::before {
 .dsh-tavern-error-meta time { margin-left: auto; color: var(--dsw-alias-label-secondary); font-weight: 400; }
 .dsh-tavern-error-message { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.55; }
 .dsh-tavern-assistant { display: flex; flex-direction: column; gap: 16px; color: var(--dsw-alias-label-primary); font-size: 16px; line-height: 28px; }
-.dsh-tavern-illustration { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.dsh-tavern-illustration > a { display: block; max-width: 100%; }
-.dsh-tavern-illustration img { display: block; width: auto; height: auto; max-width: min(100%, 320px); max-height: min(240px, 35svh); object-fit: contain; border-radius: 12px; }
-.dsh-tavern-image-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.dsh-tavern-image-adjust { box-sizing: border-box; width: min(100%, 560px); padding: 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; }
-.dsh-tavern-image-adjust textarea { box-sizing: border-box; display: block; width: 100%; min-height: 80px; margin: 8px 0; }
-.dsh-tavern-image-reference { overflow-wrap: anywhere; }
-.dsh-tavern-image-reference select { box-sizing: border-box; display: block; width: 100%; margin: 8px 0; }
-.dsh-tavern-image-settings { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
-.dsh-tavern-image-settings label { display: flex; flex-direction: column; gap: 5px; }
-.dsh-tavern-image-settings input, .dsh-tavern-image-settings select, .dsh-tavern-image-settings textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; color: inherit; background: var(--dsw-specific-sidebar-fill); }
 .dsh-tavern-assistant-reasoning { color: var(--dsw-alias-label-secondary); font-size: 14px; line-height: 22px; }
 .dsh-tavern-assistant-reasoning summary { cursor: pointer; user-select: none; }
 .dsh-tavern-assistant-reasoning pre { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
@@ -841,10 +830,6 @@ body.dsh-tavern-shell-active [data-dsh-panel-host] { overflow: clip; }
 
 .dsh-tavern-choice-trigger:disabled { opacity: .5; cursor: not-allowed; }
 
-.dsh-tavern-image-preview { position: fixed; inset: 0; box-sizing: border-box; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 64px 20px 20px; border: 0; background: rgba(0,0,0,.92); overflow: hidden; }
-.dsh-tavern-image-preview::backdrop { background: rgba(0,0,0,.8); }
-.dsh-tavern-image-preview img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
-.dsh-tavern-image-preview button { position: absolute; top: max(12px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); min-height: 40px; padding: 8px 16px; border: 1px solid #aaa; border-radius: 8px; background: #fff; color: #111; cursor: pointer; font-size: 16px; }
 
 .dsh-tavern-error-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 12px; font-size: 12px; }
 .dsh-tavern-error-controls[hidden] { display: none; }

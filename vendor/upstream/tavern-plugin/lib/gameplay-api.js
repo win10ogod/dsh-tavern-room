@@ -77,18 +77,11 @@ export function createGameplayApi(deps) {
         const activity = (await dispatch('getSessionActivity', args)).activity
         if (activity?.busy) await dispatch('stopBackground', { sessionId: args.sessionId, operationId: activity.operationId })
       }
-      if (owner.image) {
-        const { illustration } = await dispatch('sceneImageStatus', { sessionId: args.sessionId, turn: owner.image.turn })
-        if (illustration.status === 'running' && illustration.requestId === owner.image.requestId) await dispatch('cancelSceneImage', { sessionId: args.sessionId, ...owner.image })
-      }
+
       return { cancelled: true }
     }
     if (!chat) throw new Error('测试对话尚未初始化')
-    if (method === 'imageStatus') {
-      const last = chat.messages.findLast(message => message.role === 'assistant')
-      const { illustration } = await dispatch('sceneImageStatus', { sessionId: args.sessionId, turn: Number(last?.turn || 1) })
-      return { target: { key: illustration.key, turn: illustration.turn }, record: illustration }
-    }
+
     if (locks.has(args.sessionId)) throw new Error('会话已有操作正在提交')
     locks.add(args.sessionId)
     try {
@@ -106,12 +99,7 @@ export function createGameplayApi(deps) {
         const view = (await dispatch('getSession', args)).view
         return await dispatch('submitTask', { sessionId: args.sessionId, kind: 'candidate', requestId: args.requestId || randomUUID(), messageId: view.latestAssistantMessageId })
       }
-      if (method === 'image') {
-        const { target } = await call('imageStatus', args)
-        const image = { ...target, requestId: args.requestId || randomUUID() }
-        await store.writeJson('automation/' + args.sessionId + '.json', { ...owner, image })
-        return await dispatch('generateSceneImage', { sessionId: args.sessionId, ...image })
-      }
+
       throw new Error('未知游戏 API 方法')
     } finally { locks.delete(args.sessionId) }
   }
