@@ -63,6 +63,7 @@ async function appearanceCall(operation,args){const r=await fetch('/api/tavern-r
 function applyAppearance(value){document.documentElement.dataset.roomTheme=value.theme;document.documentElement.style.setProperty('--room-font-size',value.fontSize+'px');document.documentElement.style.setProperty('--room-content-width',value.contentWidth+'px')}
 const Appearance=appearancePanel(React,{theme:'paper',fontSize:16,contentWidth:1100},async value=>{await appearanceCall('save',value);applyAppearance(value)},()=>appearanceCall('get',{}))
 function App(){
+ const [regenerating,setRegenerating]=React.useState(false)
  const [tab,setTab]=React.useState('cards'),[features,setFeatures]=React.useState({}),[sessionId,setSessionId]=React.useState(localStorage.getItem('tavern-room-session')||''),[sessions,setSessions]=React.useState([]),[error,setError]=React.useState(''),[state,setState]=React.useState(null),[cards,setCards]=React.useState([]),[path,setPath]=React.useState(''),[mode,setMode]=React.useState('story'),[busy,setBusy]=React.useState(false),[draft,setDraft]=React.useState(''),[meta,setMeta]=React.useState({}),[revision,setRevision]=React.useState(0)
  const current=React.useRef({sessionId,state});current.current={sessionId,state}
  const runtime=React.useRef(null),readBusy=React.useRef(false)
@@ -78,10 +79,26 @@ function App(){
 
  async function create(){setBusy(true);try{const result=await run(()=>api('create',{path,mode,cardTask:mode==='card'?(path?'edit':'create'):undefined,userName:'你'}));select(result.sessionId);await refreshCatalog()}finally{setBusy(false)}}
  async function send(text=draft){if(!text.trim())return;setBusy(true);try{await run(async()=>{const input=await sessionInput(sessionId);input.setDraft(text);await input.submit('queue')});setDraft('');await refresh()}finally{setBusy(false)}}
+ async function regenerate(){
+  if(regenerating||busy||state?.running)return
+  const selected=sessionId,method=state?.view?.canReplayFailedTurn?'replayTurn':'regenBody'
+  setRegenerating(true);setBusy(true)
+  try{await run(async()=>{
+   const result=await originalRpc(method,{},selected)
+   if(result.view)P.liveView.setView(selected,result.view)
+   if(current.current.sessionId===selected)await refresh()
+   await host.sessions.refresh()
+  })}finally{setRegenerating(false);setBusy(false)}
+ }
  const openTab=(name,newMeta)=>{const key=name.replace('dsh-tavern:','');setMeta(newMeta||{});setTab({'user-profile':'profile','conversation-settings':'settings','status':'mvu'}[key]||key)}
  const ctx={betterSidebar:{updateTab:(_id,value)=>{setMeta(value.meta||{});setRevision(v=>v+1)},openTab:(seed)=>openTab(seed.type,seed.meta)}}
  const props={sessionId,scope:{sessionId},tab:{id:tab,meta},ctx,visible:true,appendMention:(...args)=>{setDraft(v=>v+' @'+args.at(-1)+' ');setTab('story')},openWorldBook:source=>openTab('worldbooks',{worldBookSource:source})}
  const view=state?.view,enabled=key=>features[key]===true
+ const messages=(state?.messages||[]).filter(m=>['user','assistant','tool'].includes(m.role))
+ const lastAssistant=messages.findLastIndex(m=>m.role==='assistant')
+ const canRegenerate=view?.canReplayFailedTurn===true||(view?.canRegenerate??view?.canRollback)===true
+ const regenBlocked=busy||regenerating||state?.running||!canRegenerate||view?.activity?.busy&&view?.activity?.role!=='settlement'&&!view?.canReplayFailedTurn
+ const regenReason=!canRegenerate?(view?.rollbackUnavailableReason||'尚無可重新生成的回覆'):view?.activity?.busy?(view.activity.blockReason||'請等待目前任務完成'):''
  const controlPropsFactory=()=>({sessionId,sessions:host.sessions,
   useSession:selector=>selector({running:state?.running===true}),
   useChat:selector=>selector({legacy:{nodes:view?.latestAssistantMessageId?[{kind:'assistant',messageId:view.latestAssistantMessageId}]:[]}}),
@@ -101,9 +118,9 @@ function App(){
   h('details',{className:'room-new',open:!sessionId},h('summary',null,'開始新對話'),h('div',{className:'room-actions'},h('select',{value:mode,onChange:e=>setMode(e.target.value)},h('option',{value:'story'},'角色故事'),h('option',{value:'card'},'卡片工作台')),h('select',{value:path,onChange:e=>setPath(e.target.value),'aria-label':'選擇人物卡'},h('option',{value:''},mode==='card'?'空白工作台':'選擇人物卡'),cards.map(c=>h('option',{key:c.path,value:c.path},c.name))),h('button',{disabled:busy||(!path&&mode!=='card'),onClick:()=>create().catch(()=>{})},'建立'))),
   h('div',{className:'room-actions'},h('select',{'aria-label':'選擇對話',value:sessionId,onChange:e=>select(e.target.value)},h('option',{value:''},'選擇對話'),sessions.map(s=>h('option',{key:s.sessionId,value:s.sessionId},s.title||s.cardName||s.sessionId))),sessionId?h(P.Export,{sessionId}):null),
   sessionId&&!view?h('p',null,'正在載入對話…'):null,
-  view?h('div',{className:'room-transcript'},(state.messages||[]).filter(m=>['user','assistant','tool'].includes(m.role)).map((m,index)=>{
+  view?h('div',{className:'room-transcript'},messages.map((m,index)=>{
    const turn=Number(m.turn)||index+1,projection=view.replyProjections?.find(p=>p.turn===turn)
-   return h('article',{key:m.id||m.messageId||index,className:'room-message '+m.role},h('small',null,m.role==='user'?view.playerName:m.role==='tool'?'工具結果':view.card?.name||'卡片 Agent'),m.role==='assistant'&&projection?P.renderProjection(projection,{sessionId,turn,helperContext:view.tavernHelper,helperContextReader:()=>current.current.state?.view?.tavernHelper,trustedCardMode:view.tavernRuntimePolicy?.trustedCardMode,eagerFrame:true,executeSlash,frameOwner:'room-story'}):h(C.TavernColoredMarkdown,{text:m.text||'',labels:{code:{copyLabel:'複製',copiedLabel:'已複製'},footnotes:'註解'}}),...(m.blocks||[]).filter(b=>b.type==='tool-call'||b.type==='reasoning').map((b,i)=>h('details',{key:i},h('summary',null,b.type==='tool-call'?'呼叫工具：'+b.name:'思考'),h('pre',null,b.arguments||b.text))))
+   return h('article',{key:m.id||m.messageId||index,className:'room-message '+m.role},h('small',null,m.role==='user'?view.playerName:m.role==='tool'?'工具結果':view.card?.name||'卡片 Agent'),m.role==='assistant'&&projection?P.renderProjection(projection,{sessionId,turn,helperContext:view.tavernHelper,helperContextReader:()=>current.current.state?.view?.tavernHelper,trustedCardMode:view.tavernRuntimePolicy?.trustedCardMode,eagerFrame:true,executeSlash,frameOwner:'room-story'}):h(C.TavernColoredMarkdown,{text:m.text||'',labels:{code:{copyLabel:'複製',copiedLabel:'已複製'},footnotes:'註解'}}),...(m.blocks||[]).filter(b=>b.type==='tool-call'||b.type==='reasoning').map((b,i)=>h('details',{key:i},h('summary',null,b.type==='tool-call'?'呼叫工具：'+b.name:'思考'),h('pre',null,b.arguments||b.text))),index===lastAssistant&&['story','script'].includes(view.mode||'story')?h('div',{className:'room-actions'},h('button',{type:'button',disabled:!!regenBlocked,title:regenReason||'沿用原輸入，重新生成並替換這則回覆',onClick:()=>regenerate().catch(()=>{})},regenerating?'重新生成中…':'重新生成')):null)
   })):null,
   view?h(P.Candidates,controlProps):null,
   view?h(P.CandidateQuestion,controlProps):null,
