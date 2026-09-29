@@ -1,26 +1,22 @@
 - insert:
-    - id: tavern-room
-      name: cordis:group
-      group: true
-      config:
-        - id: tavern-workspace
-          name: dsh-tavern-room
-          config: {}
-        - id: tavern-full-engine
-          name: dsh-tavern-room/engine
-        - id: tavern-cards
-          name: dsh-tavern-room/cards
-        - id: tavern-worldbooks
-          name: dsh-tavern-room/worldbooks
-        - id: tavern-story
-          name: dsh-tavern-room/story
-        - id: tavern-memory
-          name: dsh-tavern-room/memory
-        - id: tavern-mvu
-          name: dsh-tavern-room/mvu
-        - id: tavern-phone
-          name: dsh-tavern-room/phone
-        - id: tavern-appearance
-          name: dsh-tavern-room/appearance
-        - id: tavern-presets
-          name: dsh-tavern-room/presets
+    - id: tavern-workspace
+      name: dsh-tavern-room
+      config: {}
+    - id: tavern-full-engine
+      name: dsh-tavern-room/engine
+    - id: tavern-cards
+      name: dsh-tavern-room/cards
+    - id: tavern-worldbooks
+      name: dsh-tavern-room/worldbooks
+    - id: tavern-story
+      name: dsh-tavern-room/story
+    - id: tavern-memory
+      name: dsh-tavern-room/memory
+    - id: tavern-mvu
+      name: dsh-tavern-room/mvu
+    - id: tavern-phone
+      name: dsh-tavern-room/phone
+    - id: tavern-appearance
+      name: dsh-tavern-room/appearance
+    - id: tavern-presets
+      name: dsh-tavern-room/presets

@@ -2997,7 +2997,7 @@ export async function apply(ctx) {
         return { patch: sessionPatch.view() }
       }
       case 'getUpdateStatus':
-      case 'checkUpdate': return {status:{phase:'managed',host:'plugin',currentVersion:'0.2.2',message:'由 DSH 插件管理更新'}}
+      case 'checkUpdate': return {status:{phase:'managed',host:'plugin',currentVersion:'0.2.4',message:'由 DSH 插件管理更新'}}
       case 'startUpdate': throw new Error('請從 DSH 的插件管理更新酒館插件')
       case 'prepareSessionOpening': {
         const chat = await chatForSession(args && args.sessionId)
