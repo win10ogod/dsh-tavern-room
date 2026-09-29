@@ -1,6 +1,6 @@
 {
   "name": "dsh-tavern-room",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "type": "module",
   "main": "lib/index.js",
   "description": "DSH Tavern engine, character workbench, JavaScript/iframe and MVU runtime in one dedicated DSH plugin",

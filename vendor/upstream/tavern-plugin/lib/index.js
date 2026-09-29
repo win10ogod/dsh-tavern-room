@@ -660,9 +660,14 @@ export async function apply(ctx) {
   const { read: readPreset, readDocument: readPresetDocument, preview: previewPreset,
     import: importPreset, editor: presetEditor, runtime: runtimePresets, plans: bypassPlans } = presetLibrary
   let resourceGraph
-  async function renameResource(resourcePath, name) { return await resourceGraph.rename(resourcePath, name) }
+  async function renameResource(resourcePath, name) {
+    const result = await resourceGraph.rename(resourcePath, name)
+    await worldBooks.renameGlobal(resourcePath, result.path)
+    return result
+  }
   async function deleteLibraryResource(resourcePath, expectedKind) {
     const result = await resourceGraph.remove(resourcePath, expectedKind)
+    await worldBooks.removeGlobalPath(result.path)
     return { removed: result.path }
   }
   async function deleteResource(resourcePath) { return await deleteLibraryResource(resourcePath, 'source') }
@@ -670,6 +675,10 @@ export async function apply(ctx) {
     return await deleteLibraryResource(resourcePath, 'preset')
   }
   const worldBooks = createWorldBookLibrary({
+    globalStore: {
+      read: () => profileData.readJson('global-worldbooks.json'),
+      write: value => profileData.writeJson('global-worldbooks.json', value)
+    },
     enabled:()=>ctx.get('tavernRoom')?.has('worldbooks') !== false,
     normalizePath: normalizeResourcePath,
     resources: {
@@ -2939,7 +2948,7 @@ export async function apply(ctx) {
         return { patch: sessionPatch.view() }
       }
       case 'getUpdateStatus':
-      case 'checkUpdate': return {status:{phase:'managed',host:'plugin',currentVersion:'0.2.5',message:'由 DSH 插件管理更新'}}
+      case 'checkUpdate': return {status:{phase:'managed',host:'plugin',currentVersion:'0.2.6',message:'由 DSH 插件管理更新'}}
       case 'startUpdate': throw new Error('請從 DSH 的插件管理更新酒館插件')
       case 'prepareSessionOpening': {
         const chat = await chatForSession(args && args.sessionId)
@@ -3033,6 +3042,7 @@ export async function apply(ctx) {
       case 'getWorldBook': return await worldBooks.get(args && args.source)
       case 'getWorldBookBinding': return { binding: await worldBooks.binding(args && args.cardPath) }
       case 'getWorldBookAssociations': return { associations: await worldBooks.associations(args && args.source) }
+      case 'setGlobalWorldBook': return { globalBooks: await worldBooks.setGlobal(args?.source, args) }
       case 'bindWorldBook': return { binding: await worldBooks.bind(args && args.cardPath, args && args.source) }
       case 'setWorldBookBindings': return { binding: await worldBooks.setBindings(args && args.cardPath, args && args.sources) }
       case 'unbindWorldBook': return { binding: await worldBooks.unbind(args && args.cardPath, args && args.source) }

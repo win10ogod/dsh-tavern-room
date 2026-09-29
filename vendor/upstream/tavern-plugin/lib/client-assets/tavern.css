@@ -1776,3 +1776,6 @@ header .nL4_yW_moreButton { display: none !important; }
 .dsh-tavern-script-code-scroll pre { flex: 1 0 auto; margin: 0; padding: 12px; color: var(--dsw-alias-label-primary); font: inherit; white-space: pre; overflow-wrap: normal; word-break: normal; }
 .dsh-tavern-script-code-scroll code { font: inherit; }
 .dsh-tavern-script-code > summary:focus-visible, .dsh-tavern-script-code-scroll:focus-visible { outline: 2px solid var(--dsh-tavern-accent); outline-offset: -2px; }
+
+.dsh-tavern-global-worldbook { display: flex; flex-direction: column; gap: 10px; margin: 0 0 16px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; }
+.dsh-tavern-global-worldbook label { display: flex; align-items: center; gap: 8px; }
