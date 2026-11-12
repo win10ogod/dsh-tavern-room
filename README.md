@@ -1,6 +1,6 @@
 # DSH 酒館
 
-將 [DSH Tavern 2.3.0](https://github.com/flizzywine/dsh-tavern/tree/5039205e19a84ba1c7766bf3de7d7014069cc88f) 的執行引擎、卡片工作台與瀏覽器相容層移植到 DSH 0.1.7-rc.2，集中在獨立的「酒館」頁面。
+將 [DSH Tavern 2.3.0](https://github.com/flizzywine/dsh-tavern/tree/5039205e19a84ba1c7766bf3de7d7014069cc88f) 的執行引擎、卡片工作台與瀏覽器相容層移植到 DSH，集中在獨立的「酒館」頁面。0.3.0 起支援 DSH 0.2.2-rc.1；仍在 DSH 0.1.7-rc.2 的環境請使用 0.2.8。
 
 一個插件包包含人物卡、世界書與提示詞、劇情會話、卡片記憶、MVU、角色手機、外觀及酒館預設八個功能模組。使用 DSH 插件面板的總開關與各模組開關。停用功能保留資料；需要 MVU 的卡片在 MVU 關閉時會明確要求重新啟用。
 
@@ -37,6 +37,8 @@ node scripts/import-sillytavern.mjs --source D:/SillyTavern --data-root PATH_TO_
 ## DSH 適配
 
 使用 DSH 原生 Agent 預設註冊、工具作用域、會話保留與認證 API。新增訊息採用 format v4 的 producer source 和有效回合座標。
+
+DSH 0.2.2 不再把工具宣告放進系統提示的組裝（`system-prompt/assemble` 沒有 `assembly.tools`）。酒館沿用上游 [DSH Tavern 3.3](https://github.com/flizzywine/dsh-tavern/tree/09a66711abaa7a02f3626f0fb04023cf3b11b418) 的 `host/tools.js`：從該步准入的工具開始篩選，篩選結果在模型請求（`llm/stream`）與工具執行（guard、`tools/pre-execute`）兩處生效。前台對話與後台任務都經過它；世界書篩選任務的工具限制改在這裡做。卡片記憶使用支援 DSH 0.2 的 dsh-mnemon 0.5.31（與上游 3.3 相同）。
 
 正文與工具結果的編輯以插件擁有的 surface 記錄儲存，保留原始訊息、工具參數及來源引用；酒館會還原其角色與內容供模型和頁面使用。預檢、分支及存檔讀回使用原始 DSH 事件，不修改 DSH 安裝檔或放寬原生驗證。這些酒館編輯視圖需要本插件載入。
 

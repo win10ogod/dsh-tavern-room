@@ -1,4 +1,5 @@
 import { createBackgroundProgress } from './domain/background-progress.js'
+import { createHostToolPolicy } from './host/tools.js'
 import { worldbookSnapshot } from './domain/worldbook-snapshot.js'
 import { projectCandidateScriptContext } from './domain/candidate-script-context.js'
 import { projectWorldbookFilterContext } from './domain/worldbook-filter-context.js'
@@ -166,20 +167,29 @@ export function createBackgroundAgentTask(options) {
       childCtx.systemPrompt.suppressRuntimeContext()
 
       childCtx.tools.restrict({ allow: state.input.task === 'phone' ? [] : ['skill', 'tavern_read_skill_reference', 'web_search'] })
-      childCtx.on('system-prompt/assemble', async function (_assembly, _context, next) {
-        const assembly = await next()
-        prependSystemInstruction(assembly, options.systemAppend?.())
-        if (state.input.task === 'phone') {
-          assembly.sections = (assembly.sections || []).filter(function (section) {
-            return !section || typeof section.name !== 'string' || !section.name.startsWith('tool:')
-          })
-          assembly.tools = []
+      // DSH 0.2.2 owns tool declarations outside the assembly waterfall; the policy reads the
+      // step's admitted tools and enforces the filtered list (upstream v3.3 host/tools.js).
+      const hostTools = createHostToolPolicy(childCtx)
+      childCtx.on('system-prompt/assemble', async function (_assembly, context, next) {
+        return hostTools.assemble(await next(), context, function (assembly, tools) {
+          if (tools) assembly.tools = tools
+          prependSystemInstruction(assembly, options.systemAppend?.())
+          if (state.input.task === 'phone') {
+            assembly.sections = (assembly.sections || []).filter(function (section) {
+              return !section || typeof section.name !== 'string' || !section.name.startsWith('tool:')
+            })
+            assembly.tools = []
+            return assembly
+          }
+          // Formerly filtered in agent/request, which can no longer change the tools in 0.2.2.
+          if (state.input.task === 'worldbook-filter') {
+            assembly.tools = (assembly.tools || []).filter(tool => ['worldbook_candidate_read', 'worldbook_filter_submit'].includes(tool?.name) || sharedByName.get(tool?.name)?.allowDuringWorldbookFilter === true)
+          }
+          if (state.input.webSearchEnabled === true) return assembly
+          assembly.sections = (assembly.sections || []).filter(function (section) { return section && section.name !== 'tool:web_search' })
+          assembly.tools = (assembly.tools || []).filter(function (tool) { return tool && tool.name !== 'web_search' })
           return assembly
-        }
-        if (state.input.webSearchEnabled === true) return assembly
-        assembly.sections = (assembly.sections || []).filter(function (section) { return section && section.name !== 'tool:web_search' })
-        assembly.tools = (assembly.tools || []).filter(function (tool) { return tool && tool.name !== 'web_search' })
-        return assembly
+        })
       })
       state.refreshConfiguredTools = function () {
 

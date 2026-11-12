@@ -1,5 +1,13 @@
 {
   "repository": "https://github.com/flizzywine/dsh-tavern",
   "commit": "5039205e19a84ba1c7766bf3de7d7014069cc88f",
-  "version": "2.3.0"
+  "version": "2.3.0",
+  "backports": [
+    {
+      "path": "tavern-plugin/lib/host/tools.js",
+      "commit": "09a66711abaa7a02f3626f0fb04023cf3b11b418",
+      "version": "3.3.0",
+      "reason": "DSH 0.2.2 removed assembly.tools from the system-prompt waterfall"
+    }
+  ]
 }

@@ -183,6 +183,7 @@ import { createChatJournalStore } from './domain/chat-journal-store.js'
 import { createResourceGraph } from './domain/resource-graph.js'
 import { normalizeBackgroundTasks, applyTavernSettingsPatch, presentTavernSettings, resolveSystemPrompt } from './domain/tavern-settings.js'
 import { prompt, SYSTEM_PROMPT_DEFINITIONS, SYSTEM_PROMPT_NAMES } from './prompt-catalog.js'
+import { createHostToolPolicy } from './host/tools.js'
 
 // dsh-tavern 宿主插件（profile 组合行）
 // RPC：同源 HTTP 路由 /api/dsh-tavern/<method>（客户端 fetch 调用）
@@ -2948,7 +2949,7 @@ export async function apply(ctx) {
         return { patch: sessionPatch.view() }
       }
       case 'getUpdateStatus':
-      case 'checkUpdate': return {status:{phase:'managed',host:'plugin',currentVersion:'0.2.8',message:'由 DSH 插件管理更新'}}
+      case 'checkUpdate': return {status:{phase:'managed',host:'plugin',currentVersion:'0.3.0',message:'由 DSH 插件管理更新'}}
       case 'startUpdate': throw new Error('請從 DSH 的插件管理更新酒館插件')
       case 'prepareSessionOpening': {
         const chat = await chatForSession(args && args.sessionId)
@@ -4236,6 +4237,9 @@ export async function apply(ctx) {
     foregroundHandoff.end({ sessionId: session.id, turn: event.data && event.data.turn, reason })
   })
 
+  // DSH 0.2.2 owns tool declarations outside the assembly waterfall (no assembly.tools).
+  // The policy reads the step's admitted tools and enforces the filtered list (upstream v3.3 host/tools.js).
+  const hostTools = createHostToolPolicy(ctx)
   ctx.on('system-prompt/assemble', async function (_assembly, context, next) {
     const assembly = await next()
     const agent = context && context.agent
@@ -4250,7 +4254,7 @@ export async function apply(ctx) {
     let workspaceProjection = null
     try { workspaceProjection = await publishResourceWorkspace(agent.session.id, chat) }
     catch { console.error('dsh-tavern: 资源工作区投影刷新失败，继续使用现有资源文件') }
-    const assembled = await foregroundStrategies.assembleSystemPrompt(assembly, {
+    const assembled = await hostTools.assemble(assembly, context, async (value, tools) => { value.tools = tools || []; return foregroundStrategies.assembleSystemPrompt(value, {
       sessionId: agent.session.id,
       chat,
       cwd: agent.session.header && agent.session.header.cwd,
@@ -4258,7 +4262,7 @@ export async function apply(ctx) {
       fixedSystemSections: chat && ['story', 'script'].includes(chat.mode || 'story')
         ? withCurrentWorldbook(sessionStablePrefixSections(agent.session), (await nativeWorldBookTemplateContext(chat, await readChatCard(chat))).prefixContext ?? '')
         : sessionStablePrefixSections(agent.session)
-    })
+    }) })
     return prependSystemInstruction(assembled, chat ? runtimePrompt('system-append') : '')
   })
 
